@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cliente WebSocket Traccar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .diagnostic {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        #messages {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            height: 500px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .device {
+            background-color: #cce5ff;
+            border: 1px solid #b8daff;
+        }
+        .position {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .event {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cliente WebSocket Traccar</h1>
+        <div id="diagnostic" class="diagnostic">
+            <h3>Diagnóstico</h3>
+            <p><strong>URL WebSocket:</strong> <span id="wsUrl"></span></p>
+            <p><strong>Estado del Token:</strong> <span id="tokenStatus"></span></p>
+        </div>
+        <div id="status" class="status disconnected">Desconectado</div>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        // Obtener el token desde el servidor de forma segura
+        let token;
+        try {
+            const rawToken = '{{ token | tojson | safe }}';
+            token = rawToken === 'null' ? null : rawToken.replace(/^"|"$/g, '');
+        } catch (e) {
+            console.error('Error al procesar el token:', e);
+            token = null;
+        }
+
+        const wsUrl = token ? `ws://localhost:8082/api/socket?token=${token}` : null;
+        let ws = null;
+        let reconnectInterval = null;
+
+        // Actualizar información de diagnóstico
+        document.getElementById('wsUrl').textContent = wsUrl || 'No disponible (token no configurado)';
+        document.getElementById('tokenStatus').textContent = token ? 'Configurado' : 'No configurado';
+
+        function connect() {
+            if (!wsUrl) {
+                const status = document.getElementById('status');
+                status.textContent = 'Error: Token no configurado';
+                status.className = 'status disconnected';
+                addMessage('Sistema', 'No se puede conectar: Token no configurado', 'error');
+                return;
+            }
+
+            // Limpiar el intervalo de reconexión si existe
+            if (reconnectInterval) {
+                clearInterval(reconnectInterval);
+            }
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                const status = document.getElementById('status');
+                status.textContent = 'Conectado';
+                status.className = 'status connected';
+                addMessage('Sistema', 'Conexión establecida', 'device');
+            };
+
+            ws.onclose = function(event) {
+                const status = document.getElementById('status');
+                status.textContent = `Desconectado (Código: ${event.code}, Razón: ${event.reason || 'No especificada'})`;
+                status.className = 'status disconnected';
+                addMessage('Sistema', `Conexión cerrada - Código: ${event.code}, Razón: ${event.reason || 'No especificada'}`, 'error');
+
+                // Intentar reconectar cada 5 segundos
+                reconnectInterval = setInterval(() => {
+                    if (ws.readyState === WebSocket.CLOSED) {
+                        connect();
+                    }
+                }, 5000);
+            };
+
+            ws.onerror = function(error) {
+                addMessage('Sistema', 'Error en la conexión WebSocket', 'error');
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (!data || (Array.isArray(data.devices) && data.devices.length === 0 &&
+                                Array.isArray(data.positions) && data.positions.length === 0 &&
+                                Array.isArray(data.events) && data.events.length === 0)) {
+                        addMessage('Sistema', 'Mensaje vacío recibido', 'event');
+                        return;
+                    }
+
+                    if (data.devices) {
+                        addMessage('Dispositivos', JSON.stringify(data.devices, null, 2), 'device');
+                    }
+                    if (data.positions) {
+                        addMessage('Posiciones', JSON.stringify(data.positions, null, 2), 'position');
+                    }
+                    if (data.events) {
+                        addMessage('Eventos', JSON.stringify(data.events, null, 2), 'event');
+                    }
+                } catch (e) {
+                    addMessage('Error', 'Error al procesar el mensaje: ' + e.message, 'error');
+                }
+            };
+        }
+
+        function addMessage(type, content, className) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<strong>[${timestamp}] ${type}:</strong><br><pre>${content}</pre>`;
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Iniciar conexión
+        connect();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  traccar:
+    image: traccar/traccar:latest
+    container_name: traccar
+    ports:
+      - "5055:5055"   # Default GPS data port (TCP/UDP)
+    volumes:
+      - ./traccar/data:/opt/traccar/data
+      - ./traccar/logs:/opt/traccar/logs
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/server"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build: ./api
+    container_name: gps-api
+    depends_on:
+      - db
+      - traccar
+    volumes:
+      - ./api:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://gpsuser:gpspass@db:5432/gpsdb}
+      - TRACCAR_API_URL=${TRACCAR_API_URL:-http://traccar:8082}
+      - SECRET_KEY=${SECRET_KEY}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  db:
+    image: postgres:14
+    container_name: gps-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-gpsuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-gpsdb}
+    ports:
+      - "5432:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gpsuser}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7
+    container_name: gps-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  nginx:
+    image: nginx:latest
+    container_name: gps-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - api
+    restart: always
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: gps-network
