@@ -1,109 +1,128 @@
-# Cliente API Traccar
+# Cliente WebSocket Traccar 🛰️
 
-Este proyecto es un cliente API para Traccar que permite obtener información de dispositivos GPS en tiempo real, utilizando tanto REST API como WebSocket.
+Cliente WebSocket para Traccar que proporciona una interfaz web en tiempo real para monitorear dispositivos GPS, posiciones y eventos.
 
-## Requisitos
+## 🌟 Características
+
+- 📱 Interfaz web moderna y responsive
+- 🔄 Conexión WebSocket en tiempo real con reconexión automática
+- 📍 Visualización de:
+  - Dispositivos activos
+  - Posiciones en tiempo real
+  - Eventos del sistema
+- 🛡️ Manejo robusto de errores y diagnósticos
+- 🔐 Soporte para autenticación por token
+
+## 🛠️ Requisitos Previos
 
 - Python 3.8 o superior
-- Servidor Traccar funcionando (por defecto en http://localhost:8082)
+- Servidor Traccar configurado y funcionando
+- Acceso a la API de Traccar (URL y credenciales)
 
-## Instalación
+## 📦 Instalación
 
-1. Clonar el repositorio:
-```bash
-git clone <url-del-repositorio>
-cd TRAKII-API
-```
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/TuliEscobar/traccar-websocket-client.git
+   cd traccar-websocket-client
+   ```
 
-2. Crear un entorno virtual e instalar dependencias:
-```bash
-python -m venv venv
-.\venv\Scripts\activate  # En Windows
-pip install -r requirements.txt
-```
+2. **Crear y activar entorno virtual (recomendado):**
+   ```bash
+   # Windows
+   python -m venv venv
+   .\venv\Scripts\activate
 
-3. Configurar variables de entorno:
-Copiar el archivo `.env.example` a `.env` y modificar las variables según tu configuración.
-Puedes usar autenticación por token O por usuario/contraseña:
+   # Linux/Mac
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-```
-TRACCAR_URL=http://localhost:8082
+3. **Instalar dependencias:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# Opción 1: Autenticación por token (recomendada)
-TRACCAR_TOKEN=tu_token_de_acceso
+4. **Configurar variables de entorno:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edita el archivo `.env` con tus credenciales:
+   ```env
+   TRACCAR_URL=http://tu-servidor-traccar:8082
+   TRACCAR_USER=tu-usuario
+   TRACCAR_PASSWORD=tu-contraseña
+   TRACCAR_TOKEN=tu-token  # Opcional, si prefieres usar token
+   ```
 
-# Opción 2: Autenticación por usuario/contraseña
-TRACCAR_USER=tu_usuario
-TRACCAR_PASSWORD=tu_contraseña
-```
+## 🚀 Uso
 
-Para obtener un token de acceso, puedes generarlo desde la interfaz web de Traccar o mediante una llamada a la API.
+1. **Iniciar el servidor:**
+   ```bash
+   python main.py
+   ```
+   El servidor estará disponible en `http://localhost:8000`
 
-## Uso
+2. **Acceder a la interfaz web:**
+   - Abre tu navegador y visita `http://localhost:8000`
+   - La interfaz mostrará el estado de la conexión y los mensajes en tiempo real
 
-1. Iniciar el servidor:
-```bash
-python main.py
-```
+## 🔌 API Endpoints
 
-2. Acceder a las interfaces disponibles:
-   - Cliente Web con WebSocket: http://localhost:8000
-   - API REST: http://localhost:8000/docs
+### Página Principal
+- `GET /`
+  - Interfaz web del cliente WebSocket
+  - Requiere token configurado
 
-## Funcionalidades
+### Dispositivos
+- `GET /devices`
+  - Lista todos los dispositivos
+  - Respuesta: `List[Dict]`
 
-### Cliente Web con WebSocket
-La página principal (http://localhost:8000) proporciona:
-- Conexión WebSocket en tiempo real con Traccar
-- Visualización del estado de la conexión
-- Visualización de actualizaciones en tiempo real de:
-  - Dispositivos
-  - Posiciones
-  - Eventos
+### Posiciones
+- `GET /positions`
+  - Obtiene las posiciones actuales de todos los dispositivos
+  - Respuesta: `List[Dict]`
 
-### Endpoints REST API
+### Posiciones por Dispositivo
+- `GET /devices/{device_id}/positions`
+  - Obtiene las posiciones de un dispositivo específico
+  - Parámetros:
+    - `device_id`: ID del dispositivo (int)
+  - Respuesta: `List[Dict]`
 
-- `GET /devices`: Obtiene lista de todos los dispositivos
-- `GET /positions`: Obtiene las posiciones actuales de todos los dispositivos
-- `GET /devices/{device_id}/positions`: Obtiene las posiciones de un dispositivo específico
+## 🔍 Diagnóstico
 
-## Formato de Mensajes WebSocket
+La interfaz web incluye una sección de diagnóstico que muestra:
+- Estado de la conexión WebSocket
+- URL del WebSocket
+- Estado del token
+- Registro de eventos y errores
 
-Los mensajes recibidos a través del WebSocket tienen el siguiente formato:
+## 🤝 Contribuir
 
-```json
-{
-  "devices": [...],    // Actualizaciones de dispositivos
-  "positions": [...],  // Actualizaciones de posiciones
-  "events": [...]     // Eventos del sistema
-}
-```
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add: AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-## Documentación
+## 📝 Licencia
 
-- **API REST**: 
-  - Swagger UI: http://localhost:8000/docs
-  - ReDoc: http://localhost:8000/redoc
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
 
-- **Documentación de Traccar**:
-  - [API Reference](https://www.traccar.org/api-reference/)
-  - [WebSocket API](https://www.traccar.org/traccar-api/)
+## 🐛 Reporte de Problemas
 
-## Desarrollo
+Si encuentras algún problema o tienes una sugerencia:
+1. Revisa que no exista un issue similar
+2. Abre un nuevo issue con:
+   - Descripción clara del problema
+   - Pasos para reproducirlo
+   - Comportamiento esperado
+   - Capturas de pantalla (si aplica)
 
-### Estructura del Proyecto
-```
-TRAKII-API/
-├── main.py              # Servidor FastAPI principal
-├── requirements.txt     # Dependencias del proyecto
-├── .env                # Configuración y credenciales
-└── templates/
-    └── index.html      # Cliente WebSocket
-```
+## 📞 Soporte
 
-### Dependencias Principales
-- FastAPI: Framework web moderno y rápido
-- Uvicorn: Servidor ASGI para Python
-- Requests: Cliente HTTP para Python
-- Jinja2: Motor de plantillas
-- python-dotenv: Manejo de variables de entorno 
+Para soporte y consultas:
+- Abre un issue en GitHub
+- Envía un correo a [tuliescobar@gmail.com]
