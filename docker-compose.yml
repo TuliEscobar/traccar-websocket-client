@@ -6,6 +6,7 @@ services:
     container_name: traccar
     ports:
       - "5055:5055"   # Default GPS data port (TCP/UDP)
+      - "8082:8082"   # Puerto para la interfaz web y API REST
     volumes:
       - ./traccar/data:/opt/traccar/data
       - ./traccar/logs:/opt/traccar/logs

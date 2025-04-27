@@ -13,65 +13,67 @@ Cliente WebSocket para Traccar que proporciona una interfaz web en tiempo real p
 - 🛡️ Manejo robusto de errores y diagnósticos
 - 🔐 Soporte para autenticación por token
 
-## 🚀 Instalación y Uso
+## 🚀 Cómo correr el proyecto con Docker Compose
 
-### Opción 1: Usando Docker Compose (Recomendado)
+Este proyecto utiliza Docker Compose para facilitar la orquestación de todos los servicios necesarios (Traccar, API, base de datos PostgreSQL, Redis y Nginx).
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone https://github.com/TuliEscobar/traccar-websocket-client.git
-   cd traccar-websocket-client
-   ```
+### 1. Clona el repositorio
 
-2. **Configurar variables de entorno:**
-   ```bash
-   cp .env.example .env
-   ```
-   Edita el archivo `.env` con las siguientes variables:
-   ```env
-   # Variables requeridas
-   SECRET_KEY=tu_clave_secreta_aqui
-   POSTGRES_PASSWORD=tu_contraseña_postgres_aqui
-
-   # Variables opcionales (valores por defecto)
-   POSTGRES_USER=gpsuser
-   POSTGRES_DB=gpsdb
-   DATABASE_URL=postgresql://gpsuser:gpspass@db:5432/gpsdb
-   TRACCAR_API_URL=http://traccar:8082
-   REDIS_URL=redis://redis:6379/0
-   ```
-
-3. **Iniciar los servicios:**
-   ```bash
-   docker compose up -d
-   ```
-
-4. **Verificar que los servicios estén funcionando:**
-   ```bash
-   docker compose ps
-   ```
-
-Los servicios estarán disponibles en:
-- Traccar: http://localhost:5055 (datos GPS)
-- API: http://localhost:8000
-- Interfaz Web: http://localhost
-
-### Variables de Entorno Detalladas
-
-```env
-# Variables Requeridas
-SECRET_KEY=tu_clave_secreta_aqui          # Clave para encriptación y tokens
-POSTGRES_PASSWORD=tu_contraseña_postgres_aqui      # Contraseña de PostgreSQL
-
-# Variables Opcionales
-POSTGRES_USER=gpsuser                     # Usuario de PostgreSQL (default: gpsuser)
-POSTGRES_DB=gpsdb                         # Nombre de la base de datos (default: gpsdb)
-DATABASE_URL=postgresql://gpsuser:gpspass@db:5432/gpsdb  # URL de conexión a PostgreSQL
-TRACCAR_API_URL=http://traccar:8082       # URL interna de Traccar
-REDIS_URL=redis://redis:6379/0            # URL de conexión a Redis
+```bash
+git clone https://github.com/TuliEscobar/traccar-websocket-client.git
+cd traccar-websocket-client
 ```
 
-### Opción 2: Instalación Local
+### 2. Configura las variables de entorno
+
+Copia el archivo de ejemplo y edítalo con tus valores:
+
+```bash
+cp .env.example .env
+```
+
+Edita el archivo `.env` y asegúrate de definir al menos:
+- `SECRET_KEY` (clave secreta para la API)
+- `POSTGRES_PASSWORD` (contraseña para la base de datos)
+
+Puedes ajustar otras variables según tus necesidades.
+
+### 3. Inicia los servicios con Docker Compose
+
+```bash
+docker compose up -d
+```
+
+Esto levantará los siguientes servicios:
+- **traccar:** Servidor de rastreo GPS (puerto 5055)
+- **api:** API web para la interfaz y comunicación con Traccar (puerto 8000)
+- **db:** Base de datos PostgreSQL (puerto 5432)
+- **redis:** Almacenamiento en memoria para caché y colas (puerto 6379)
+- **nginx:** Proxy inverso para exponer la interfaz web (puertos 80 y 443)
+
+### 4. Verifica que los servicios estén corriendo
+
+```bash
+docker compose ps
+```
+
+Puedes ver los logs de un servicio específico con:
+
+```bash
+docker compose logs <servicio>
+```
+
+Por ejemplo, para ver los logs de Traccar:
+
+```bash
+docker compose logs traccar
+```
+
+### 5. Accede a los servicios
+
+- **Traccar:** http://localhost:5055 (para datos GPS)
+- **API:** http://localhost:8000
+- **Interfaz Web:** http://localhost
 
 ## 🛠️ Requisitos Previos
 
@@ -283,3 +285,54 @@ Para soporte y consultas:
    - Verifica la conexión del dispositivo GPS
    - Confirma que tenga señal GPS
    - Revisa el intervalo de actualización configurado
+
+## 🚀 Despliegue rápido en AWS (EC2)
+
+¿Quieres correr este proyecto en la nube? Aquí tienes los pasos esenciales para desplegarlo en una instancia EC2 de AWS:
+
+### 1. Lanza una instancia EC2
+- Elige Ubuntu Server 22.04 o Amazon Linux 2.
+- Selecciona un tipo t2.micro (o superior según tu carga).
+- Asocia un par de llaves para acceso SSH.
+
+### 2. Abre los puertos necesarios en el Security Group
+- **80** (HTTP, interfaz web)
+- **443** (HTTPS, si usas SSL)
+- **5055** (TCP/UDP, datos GPS)
+- **8082** (API/Interfaz Traccar)
+- **8000** (API interna, opcional)
+- **5432** (PostgreSQL, solo si necesitas acceso externo, no recomendado)
+- **6379** (Redis, solo si necesitas acceso externo, no recomendado)
+
+### 3. Instala Docker y Docker Compose
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose
+sudo systemctl enable --now docker
+```
+
+### 4. Clona el repositorio y configura variables de entorno
+```bash
+git clone https://github.com/TuliEscobar/traccar-websocket-client.git
+cd traccar-websocket-client
+cp .env.example .env
+# Edita .env y pon tus claves y contraseñas seguras
+```
+
+### 5. Despliega los servicios
+```bash
+docker compose up -d
+```
+
+### 6. Accede a la interfaz
+- **Traccar:** http://<tu-ip-publica>:8082
+- **Web:** http://<tu-ip-publica>
+- **API:** http://<tu-ip-publica>:8000
+
+### 7. Configura los dispositivos GPS
+- Apunta el dispositivo a la IP pública de tu instancia y puerto 5055 (TCP).
+
+### Consejos de seguridad
+- Usa contraseñas fuertes en `.env`.
+- No expongas puertos de base de datos ni Redis a Internet si no es necesario.
+- Cambia la contraseña por defecto de Traccar.
+- Considera usar HTTPS (puerto 443) y un firewall adicional.
